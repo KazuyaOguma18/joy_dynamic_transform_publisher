@@ -1,0 +1,4 @@
+joy:
+  keymap:
+    axes: ["lsh", "lsv", "l2", "rsh", "rsv", "r2", "cbh", "cbv"]
+    buttons: ["x", "o", "t", "s", "l1", "r1", "l2", "r2", "share", "options", "ps", "lcb", "rcb"]
