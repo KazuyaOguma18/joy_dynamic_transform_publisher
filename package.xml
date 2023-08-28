@@ -57,6 +57,7 @@
   <exec_depend>sensor_msgs</exec_depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
+  <depend>jsk_rviz_plugins</depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
