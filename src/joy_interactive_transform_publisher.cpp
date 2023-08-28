@@ -21,7 +21,9 @@ class JoyInteractiveTransformPublisher {
     yaw_scale_ = rp::param<double>("~yaw_scale", 1.);
     pitch_scale_ = rp::param<double>("~pitch_scale", 1.);
 
-    current_pose_ = Eigen::Isometry3d();
+    stop_key_ = rp::param<std::string>("~stop_key", "rcb");
+
+    current_pose_ = Eigen::Isometry3d::Identity();
 
     timer_ = nh.createTimer(ros::Duration(0.1), &JoyInteractiveTransformPublisher::timerCallback, this);
   }
@@ -32,19 +34,27 @@ class JoyInteractiveTransformPublisher {
     rsh = (double)joy->axes[joy_config_.getAxesIndex("rsh")];
     rsv = (double)joy->axes[joy_config_.getAxesIndex("rsv")];
 
-
     last_rsh_ = rsh;
     last_rsv_ = rsv;
+
+    static bool last_stop_key = joy->buttons[joy_config_.getButtonIndex(stop_key_)] == 1;
+    bool current_stop_key = joy->buttons[joy_config_.getButtonIndex(stop_key_)] == 1;
+    if (current_stop_key && last_stop_key != current_stop_key) {
+      stop_pub_ = !stop_pub_;
+    }
+
+    last_stop_key = current_stop_key;
   }
 
   void timerCallback(const ros::TimerEvent& e) {
     (void)e;
-
-    ROS_INFO_STREAM("rsh = " << last_rsh_ << ", rsv = " << last_rsv_);
+    if (stop_pub_) return;
+    // ROS_INFO_STREAM("rsh = " << last_rsh_ << ", rsv = " << last_rsv_);
 
     // if the input from right horizontal stick, rotate along the yaw axis from current pose
-    current_pose_.linear() *= (Eigen::AngleAxisd(last_rsh_ * yaw_scale_, Eigen::Vector3d::UnitZ()) * 
+    current_pose_.linear() *= (Eigen::AngleAxisd(last_rsh_ * yaw_scale_, current_pose_.rotation().inverse() * Eigen::Vector3d::UnitZ()) * 
                                Eigen::AngleAxisd(last_rsv_ * pitch_scale_, Eigen::Vector3d::UnitY())).matrix();
+
     // if the input from right vertical stick, rotate along the pitch axis from current pose
     // send transfrom
     tf_pub_->sendTransform(makeTransformStamped(world_frame_, child_frame_, tf2::eigenToTransform(current_pose_).transform));
@@ -56,10 +66,12 @@ class JoyInteractiveTransformPublisher {
   ros::Timer timer_;
 
   std::string world_frame_, child_frame_;
+  std::string stop_key_;
   double yaw_scale_, pitch_scale_;
 
   Eigen::Isometry3d current_pose_;
   double last_rsh_, last_rsv_;
+  bool stop_pub_;
 
   JoyConfig joy_config_;
 };
